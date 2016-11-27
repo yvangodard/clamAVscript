@@ -138,10 +138,10 @@ for S in $(cat ${FILE_DIRTOSCAN}); do
 		DIRSIZE=$(du -sh "$S" 2>/dev/null | cut -f1)
 		echo "Volume à scanner : "$DIRSIZE"."
 		[[ -z ${DIR_TO_EXCLUDE} ]] && clamscan -ri "$S"
-		[[ ! -z ${DIR_TO_EXCLUDE} ]] && clamscn -ri "$S" --exclude-dir="${DIR_TO_EXCLUDE}"
+		[[ ! -z ${DIR_TO_EXCLUDE} ]] && clamscan -ri "$S" --exclude-dir="${DIR_TO_EXCLUDE}"
 	elif [[ ! -e ${S} ]]; then
 		let ERROR=$ERROR+1
-		echo "Problème rencontré sur : "$DIRSIZE", qui ne semble pas être correct."
+		echo "Problème rencontré sur : "$S", qui ne semble pas être correct."
 	fi
 done
 
