@@ -92,8 +92,10 @@ done
 
 [[ ${HELP} = "yes" ]] && help
 
-[ ! -e ${LOGDIR%/} ] && mkdir -p ${LOGDIR%/}
-[ $? -ne 0 ] && echo "Problème pour créer le dossier des logs '${LOGDIR%/}'." && exit 1
+if [[ ! -e ${LOGDIR%/} ]]; then
+	mkdir -p ${LOGDIR%/}
+	[ $? -ne 0 ] && echo "Problème pour créer le dossier des logs '${LOGDIR%/}'." && exit 1
+fi
 
 # Redirect standard outpout to temp file
 exec 6>&1
