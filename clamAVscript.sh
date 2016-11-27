@@ -171,6 +171,8 @@ elif [[ ${EMAIL_REPORT} = "always" ]] ; then
 	fi
 fi
 
+rm -R /tmp/${SCRIPT_NAME_WITHOUT_EXT}*
+
 [[ ${ERROR} -ne "0" ]] && exit 1
 [[ ${INFECTED} -ne "0" ]] && exit 2
 exit 0
