@@ -111,14 +111,21 @@ if [[ ${EMAIL_REPORT} != "always" ]] || [[ ${EMAIL_REPORT} != "onerror" ]] || [[
 	EMAIL_REPORT="always"
 fi
 
-# Test du contenu de l'adresse
-echo "${EMAIL_ADDRESS}" | grep '^[a-zA-Z0-9._-]*@[a-zA-Z0-9._-]*\.[a-zA-Z0-9._-]*$' > /dev/null 2>&1
-if [ $? -ne 0 ]; then
-	echo ""
-    echo "Cette adresse '${EMAIL_ADDRESS}' ne semble pas correcte."
-    echo "Nous continuons sans envoi d'email avec '- E nomail'."
-    EMAIL_REPORT="nomail"
-    EMAIL_ADDRESS=""
+# Contrôle du paramètre EMAIL_REPORT
+if [[ ${EMAIL_REPORT} = "always" ]] || [[ ${EMAIL_REPORT} = "onerror" ]]; then
+	# Test du contenu de l'adresse
+	echo "${EMAIL_ADDRESS}" | grep '^[a-zA-Z0-9._-]*@[a-zA-Z0-9._-]*\.[a-zA-Z0-9._-]*$' > /dev/null 2>&1
+	if [ $? -ne 0 ]; then
+		echo ""
+	    echo "Cette adresse '${EMAIL_ADDRESS}' ne semble pas correcte."
+	    echo "Nous continuons sans envoi d'email avec '- E nomail'."
+	    EMAIL_REPORT="nomail"
+	    EMAIL_ADDRESS=""
+	elif [[ -z ${EMAIL_ADDRESS} ]]; then
+		echo ""
+		echo "L'adresse email est vide, nous continuons donc avec l'option '-l nomail'."
+		EMAIL_REPORT="nomail"
+	fi
 fi
 
 # Si il n'y a pas de dossier spécifique à scanner
