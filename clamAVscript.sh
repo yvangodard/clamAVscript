@@ -92,8 +92,6 @@ done
 
 [[ ${HELP} = "yes" ]] && help
 
-[[ -z ${EMAIL_ADDRESS} ]] && help
-
 [ ! -e ${LOGDIR%/} ] && mkdir -p ${LOGDIR%/}
 [ $? -ne 0 ] && echo "Problème pour créer le dossier des logs '${LOGDIR%/}'." && exit 1
 
