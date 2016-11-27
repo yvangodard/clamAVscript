@@ -104,10 +104,10 @@ exec >> ${LOGFILE}
 echo "**** `date` ****"
 
 # Contrôle du paramètre EMAIL_REPORT
-if [[ ${EMAIL_REPORT} != "always" ]] && [[ ${EMAIL_REPORT} != "onerror" ]] && [[ ${EMAIL_REPORT} != "nomail" ]]; then
+if [[ ${EMAIL_REPORT} -ne "always" ]] && [[ ${EMAIL_REPORT} -ne "onerror" ]] && [[ ${EMAIL_REPORT} -ne "nomail" ]]; then
 	echo ""
-	echo "Le paramètre '- E ${EMAIL_REPORT}' n'est pas correct. Nous poursuivons avec '- E always'."
-	EMAIL_REPORT="always"
+	echo "Le paramètre '-E ${EMAIL_REPORT}' n'est pas correct. Nous poursuivons avec '-E nomail'."
+	EMAIL_REPORT="nomail"
 fi
 
 # Contrôle du paramètre EMAIL_REPORT
