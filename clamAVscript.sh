@@ -16,6 +16,7 @@ ERROR=0
 HELP="no"
 toBeUpdated=0
 
+# Vérification du système pour choisir quelle commande MD5 sera utilisée
 echo ${system} | grep "Darwin" > /dev/null 2>&1
 if [[ $? -eq 0 ]]; then
 	systemOs="Mac"
@@ -28,13 +29,15 @@ fi
 # Changement du séparateur par défaut et mise à jour auto
 OLDIFS=$IFS
 IFS=$'\n'
-# Auto-update script
+# Auto-update script, en fonction de l'OS
+# On teste l'empreinte MD5 du script et on la compare à celle de GitHub
 if [[ ${systemOs} == "Mac" ]] && [[ $(checkUrl ${githubRemoteScript}) -eq 0 ]] && [[ $(md5 -q "$0") != $(curl -Lsf ${githubRemoteScript} | md5 -q) ]]; then
 	toBeUpdated=1
 fi
 if [[ ${systemOs} == "Linux" ]] && [[ $(checkUrl ${githubRemoteScript}) -eq 0 ]] && [[ $(md5sum "$0" | awk '{print $1}') != $(curl -Lsf ${githubRemoteScript} | md5sum | awk '{print $1}') ]]; then
 	toBeUpdated=1
 fi
+# Si une mise à jour est à faire on la réalise
 if [[ ${toBeUpdated} -eq "1" ]]; then
 	[[ -e "$0".old ]] && rm "$0".old
 	mv "$0" "$0".old
