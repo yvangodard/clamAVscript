@@ -128,7 +128,7 @@ if [[ ${EMAIL_REPORT} = "always" ]] || [[ ${EMAIL_REPORT} = "onerror" ]]; then
 fi
 
 # Si il n'y a pas de dossier spécifique à scanner
-[[ ${SPECIFIC_DIR_TO_SCAN} -eq 0 ]] && echo ${DIRTOSCAN} | perl -p -e 's/%/\n/g' | perl -p -e 's/ //g' | awk '!x[$0]++' >> ${FILE_DIRTOSCAN}
+[[ ${SPECIFIC_DIR_TO_SCAN} -eq "0" ]] && echo ${DIRTOSCAN} | perl -p -e 's/%/\n/g' | perl -p -e 's/ //g' | awk '!x[$0]++' >> ${FILE_DIRTOSCAN}
 
 # Pour chaque dossier on fait un scan
 for S in ${DIRTOSCAN}; do
