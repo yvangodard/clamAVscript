@@ -129,11 +129,9 @@ fi
 
 # Si il n'y a pas de dossier spécifique à scanner
 [[ ${SPECIFIC_DIR_TO_SCAN} -eq "0" ]] && echo ${DIRTOSCAN} | perl -p -e 's/%/\n/g' | perl -p -e 's/ //g' | awk '!x[$0]++' >> ${FILE_DIRTOSCAN}
-echo "${FILE_DIRTOSCAN}"
-cat ${FILE_DIRTOSCAN}
 
 # Pour chaque dossier on fait un scan
-for S in ${DIRTOSCAN}; do
+for S in $(cat ${FILE_DIRTOSCAN}); do
 	echo ""
 	echo "Début du scan sur "$S"."
 	if [[ -e ${S} ]]; then
