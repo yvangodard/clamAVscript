@@ -14,12 +14,28 @@ EMAIL_REPORT="nomail"
 INFECTED=0
 ERROR=0
 HELP="no"
+toBeUpdated=0
+
+echo ${system} | grep "Darwin" > /dev/null 2>&1
+if [[ $? -eq 0 ]]; then
+	systemOs="Mac"
+fi
+echo ${system} | grep "Linux" > /dev/null 2>&1
+if [[ $? -eq 0 ]]; then
+	systemOs="Linux"
+fi
 
 # Changement du séparateur par défaut et mise à jour auto
 OLDIFS=$IFS
 IFS=$'\n'
 # Auto-update script
-if [[ $(checkUrl ${githubRemoteScript}) -eq 0 ]] && [[ $(md5 -q "$0") != $(curl -Lsf ${githubRemoteScript} | md5 -q) ]]; then
+if [[ ${systemOs} == "Mac" ]] && [[ $(checkUrl ${githubRemoteScript}) -eq 0 ]] && [[ $(md5 -q "$0") != $(curl -Lsf ${githubRemoteScript} | md5 -q) ]]; then
+	toBeUpdated=1
+fi
+if [[ ${systemOs} == "Linux" ]] && [[ $(checkUrl ${githubRemoteScript}) -eq 0 ]] && [[ $(md5sum "$0" | awk '{print $1}') != $(curl -Lsf ${githubRemoteScript} | md5sum | awk '{print $1}') ]]; then
+	toBeUpdated=1
+fi
+if [[ ${toBeUpdated} -eq "1" ]]; then
 	[[ -e "$0".old ]] && rm "$0".old
 	mv "$0" "$0".old
 	curl -Lsf ${githubRemoteScript} >> "$0"
@@ -34,7 +50,7 @@ if [[ $(checkUrl ${githubRemoteScript}) -eq 0 ]] && [[ $(md5 -q "$0") != $(curl 
 fi
 IFS=$OLDIFS
 
-help () {
+function help () {
 	echo "${VERSION}"
 	echo ""
 	echo "Cet outil permet de réaliser un scan avec ClamAV de dossiers"
@@ -67,6 +83,12 @@ help () {
 	echo "     -E <excluded directories> :  répertoires à exclure du scan. Séparer les valeurs par un pipe '|',"
 	echo "                                  et mettre des guillemets (par exemple : '\"/test|/home/user2\"')"
 	exit 0
+}
+
+# Check URL
+function checkUrl() {
+  command -p curl -Lsf "$1" >/dev/null
+  echo "$?"
 }
 
 # Vérification des options/paramètres du script 
