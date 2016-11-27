@@ -3,6 +3,7 @@ VERSION="clamAVscript v 1.0 - 2016 - Yvan GODARD - godardyvan@gmail.com"
 SCRIPT_DIR=$(dirname $0)
 SCRIPT_NAME=$(basename $0)
 SCRIPT_NAME_WITHOUT_EXT=$(echo "${SCRIPT_NAME}" | cut -f1 -d '.')
+system=$(uname -a)
 LOGDIR="/var/log/clamav"
 LOGFILE="${LOGDIR%/}/clamav-$(date +'%Y-%m-%d-%h:%s').log"
 DIRTOSCAN="/var/www%/var/mail"
@@ -15,7 +16,6 @@ INFECTED=0
 ERROR=0
 HELP="no"
 toBeUpdated=0
-system=$(uname -a)
 
 # Vérification du système pour choisir quelle commande MD5 sera utilisée
 echo ${system} | grep "Darwin" > /dev/null 2>&1
