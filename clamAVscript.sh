@@ -15,6 +15,7 @@ INFECTED=0
 ERROR=0
 HELP="no"
 toBeUpdated=0
+system=$(uname -a)
 
 # Vérification du système pour choisir quelle commande MD5 sera utilisée
 echo ${system} | grep "Darwin" > /dev/null 2>&1
