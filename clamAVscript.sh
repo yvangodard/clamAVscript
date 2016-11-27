@@ -28,9 +28,9 @@ if [[ $? -eq 0 ]]; then
 fi
 
 # Check URL
-function checkUrl() {
-  command -p curl -Lsf "$1" >/dev/null
-  echo "$?"
+function checkUrl () {
+	command -p curl -Lsf "$1" >/dev/null
+	echo "$?"
 }
 
 # Changement du séparateur par défaut et mise à jour auto
