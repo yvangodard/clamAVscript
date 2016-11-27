@@ -65,7 +65,7 @@ help () {
 	echo "                                  doit être 'onerror', 'always' ou 'nomail',"
 	echo "                                  (par défaut : '${EMAIL_REPORT}')"
 	echo "     -E <excluded directories> :  répertoires à exclure du scan. Séparer les valeurs par un pipe '|',"
-	echo "                                  (par exemple : '/test|/home/user2')"
+	echo "                                  et mettre des guillemets (par exemple : '\"/test|/home/user2\"')"
 	exit 0
 }
 
