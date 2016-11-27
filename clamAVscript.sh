@@ -27,6 +27,12 @@ if [[ $? -eq 0 ]]; then
 	systemOs="Linux"
 fi
 
+# Check URL
+function checkUrl() {
+  command -p curl -Lsf "$1" >/dev/null
+  echo "$?"
+}
+
 # Changement du séparateur par défaut et mise à jour auto
 OLDIFS=$IFS
 IFS=$'\n'
@@ -87,12 +93,6 @@ function help () {
 	echo "     -E <excluded directories> :  répertoires à exclure du scan. Séparer les valeurs par un pipe '|',"
 	echo "                                  et mettre des guillemets (par exemple : '\"/test|/home/user2\"')"
 	exit 0
-}
-
-# Check URL
-function checkUrl() {
-  command -p curl -Lsf "$1" >/dev/null
-  echo "$?"
 }
 
 # Vérification des options/paramètres du script 
