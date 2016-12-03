@@ -163,9 +163,7 @@ fi
 [[ ${specificDirToScan} -eq "0" ]] && echo ${dirToScan} | perl -p -e 's/%/\n/g' | perl -p -e 's/ //g' | awk '!x[$0]++' >> ${fileDirToScan}
 
 # Pour chaque dossier on fait un scan
-serial=0
 for S in $(cat ${fileDirToScan}); do
-	let serial=$serial+1
 	echo ""
 	echo "Début du scan sur "$S"."
 	if [[ -e ${S} ]]; then
