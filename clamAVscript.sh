@@ -1,20 +1,22 @@
 #!/bin/bash
-VERSION="clamAVscript v 1.0 - 2016 - Yvan GODARD - godardyvan@gmail.com"
-SCRIPT_DIR=$(dirname $0)
-SCRIPT_NAME=$(basename $0)
-SCRIPT_NAME_WITHOUT_EXT=$(echo "${SCRIPT_NAME}" | cut -f1 -d '.')
+version="clamAVscript v 1.1 - 2016 - Yvan GODARD - godardyvan@gmail.com"
+scriptDir=$(dirname $0)
+scriptName=$(basename $0)
+scriptNameWithoutExt=$(echo "${scriptName}" | cut -f1 -d '.')
 system=$(uname -a)
-LOGDIR="/var/log/clamav"
-LOGFILE="${LOGDIR%/}/clamav-$(date +'%Y-%m-%d-%h:%s').log"
-DIRTOSCAN="/var/www%/var/mail"
-FILE_DIRTOSCAN=$(mktemp /tmp/${SCRIPT_NAME_WITHOUT_EXT}_FILE_DIRTOSCAN.XXXXX)
-DIR_TO_EXCLUDE=""
-SPECIFIC_DIR_TO_SCAN=0
+logDir="/var/log/clamav"
+logFile="${logDir%/}/clamav.log"
+dirToScan="/var/www%/var/mail"
+fileDirToScan=$(mktemp /tmp/${scriptNameWithoutExt}_fileDirToScan.XXXXX)
+tmpLog=$(mktemp /tmp/${scriptNameWithoutExt}_tmpLog.XXXXX)
+clamscanOutput=$(mktemp /tmp/${scriptNameWithoutExt}_clamscanOutput.XXXXX)
+dirToExclude=""
+specificDirToScan=0
 githubRemoteScript="https://raw.githubusercontent.com/yvangodard/clamAVscript/master/clamAVscript.sh"
-EMAIL_REPORT="nomail"
-INFECTED=0
-ERROR=0
-HELP="no"
+emailReport="nomail"
+infected=0
+error=0
+help="no"
 toBeUpdated=0
 
 # Vérification du système pour choisir quelle commande MD5 sera utilisée
@@ -61,7 +63,7 @@ fi
 IFS=$OLDIFS
 
 function help () {
-	echo "${VERSION}"
+	echo "${version}"
 	echo ""
 	echo "Cet outil permet de réaliser un scan avec ClamAV de dossiers"
 	echo "et d'être notifié par email en cas d'infection."
@@ -72,9 +74,9 @@ function help () {
 	echo "la responsabilité de l'auteur ne pourrait être engagée en cas de dommage causé à vos données."
 	echo ""
 	echo "Utilisation :"
-	echo "./${SCRIPT_NAME} [-h] | [-e <email>]"                    
+	echo "./${scriptName} [-h] | [-e <email>]"                    
 	echo "                  [-d <directories to scan>]"
-	echo "                  [-D <log directory>]"
+	echo "                  [-L <log file>]"
 	echo "                  [-l <email level>]"
 	echo "                  [-E <excluded directories>]"
 	echo ""
@@ -85,11 +87,11 @@ function help () {
 	echo "                                  Obligatoire si '-l onerror' ou '-l always' est utilisé."
 	echo "     -d <directories to scan> :   répertoire(s) à scanner. Séparer les valeurs par '%',"
 	echo "                                  par exemple : '/var/mail%/home/test',"
-	echo "                                  (par défaut : '${DIRTOSCAN}')"
-	echo "     -D <log directory> :         dossier où stocker les logs (par défaut : '${LOGDIR}')"
+	echo "                                  (par défaut : '${dirToScan}')"
+	echo "     -L <log file> :              fichier où enregistrer les logs (par défaut : '${logFile}')"
 	echo "     -l <email level> :           paramètre d'envoi du rapport par email,"
 	echo "                                  doit être 'onerror', 'always' ou 'nomail',"
-	echo "                                  (par défaut : '${EMAIL_REPORT}')"
+	echo "                                  (par défaut : '${emailReport}')"
 	echo "     -E <excluded directories> :  répertoires à exclure du scan. Séparer les valeurs par un pipe '|',"
 	echo "                                  et mettre des guillemets (par exemple : '\"/test|/home/user2\"')"
 	exit 0
@@ -97,108 +99,117 @@ function help () {
 
 # Vérification des options/paramètres du script 
 optsCount=0
-while getopts "he:d:D:l:E:" OPTION
+while getopts "he:d:L:l:E:" OPTION
 do
 	case "$OPTION" in
-		h)	HELP="yes"
+		h)	help="yes"
 						;;
-		e)	EMAIL_ADDRESS=${OPTARG}
+		e)	emailAddress=${OPTARG}
 						;;
-	    d) 	[[ ! -z ${OPTARG} ]] && echo ${OPTARG} | perl -p -e 's/%/\n/g' | perl -p -e 's/ //g' | awk '!x[$0]++' >> ${FILE_DIRTOSCAN}
-			SPECIFIC_DIR_TO_SCAN=1
+	    d) 	[[ ! -z ${OPTARG} ]] && echo ${OPTARG} | perl -p -e 's/%/\n/g' | perl -p -e 's/ //g' | awk '!x[$0]++' >> ${fileDirToScan}
+			specificDirToScan=1
 						;;
-	    D) 	LOGDIR=${OPTARG%/}
+	    L) 	logFile=${OPTARG}
+			logDir=$(dirname ${logFile})
 						;;
-	    l) 	EMAIL_REPORT=${OPTARG}
+	    l) 	emailReport=${OPTARG}
 						;;
-	    E) 	DIR_TO_EXCLUDE=${OPTARG}
+	    E) 	dirToExclude=${OPTARG}
 						;;
 	esac
 done
 
-[[ ${HELP} = "yes" ]] && help
+[[ ${help} = "yes" ]] && help
 
-if [[ ! -e ${LOGDIR%/} ]]; then
-	mkdir -p ${LOGDIR%/}
-	[ $? -ne 0 ] && echo "Problème pour créer le dossier des logs '${LOGDIR%/}'." && exit 1
+if [[ ! -e ${logDir%/} ]]; then
+	mkdir -p ${logDir%/}
+	[ $? -ne 0 ] && echo "Problème pour créer le dossier des logs '${logDir%/}'." && exit 1
 fi
+
+touch ${logFile}
+[ $? -ne 0 ] && echo "Problème pour accéder au fichier de logs '${logFile}'." && exit 1
 
 # Redirect standard outpout to temp file
 exec 6>&1
-exec >> ${LOGFILE}
+exec >> ${tmpLog}
 
 echo "**** `date` ****"
 
-# Contrôle du paramètre EMAIL_REPORT
-if [[ ${EMAIL_REPORT} -ne "always" ]] && [[ ${EMAIL_REPORT} -ne "onerror" ]] && [[ ${EMAIL_REPORT} -ne "nomail" ]]; then
+# Contrôle du paramètre emailReport
+if [[ ${emailReport} -ne "always" ]] && [[ ${emailReport} -ne "onerror" ]] && [[ ${emailReport} -ne "nomail" ]]; then
 	echo ""
-	echo "Le paramètre '-E ${EMAIL_REPORT}' n'est pas correct. Nous poursuivons avec '-E nomail'."
-	EMAIL_REPORT="nomail"
+	echo "Le paramètre '-E ${emailReport}' n'est pas correct. Nous poursuivons avec '-E nomail'."
+	emailReport="nomail"
 fi
 
-# Contrôle du paramètre EMAIL_REPORT
-if [[ ${EMAIL_REPORT} = "always" ]] || [[ ${EMAIL_REPORT} = "onerror" ]]; then
+# Contrôle du paramètre emailReport
+if [[ ${emailReport} = "always" ]] || [[ ${emailReport} = "onerror" ]]; then
 	# Test du contenu de l'adresse
-	echo "${EMAIL_ADDRESS}" | grep '^[a-zA-Z0-9._-]*@[a-zA-Z0-9._-]*\.[a-zA-Z0-9._-]*$' > /dev/null 2>&1
+	echo "${emailAddress}" | grep '^[a-zA-Z0-9._-]*@[a-zA-Z0-9._-]*\.[a-zA-Z0-9._-]*$' > /dev/null 2>&1
 	if [ $? -ne 0 ]; then
 		echo ""
-	    echo "Cette adresse '${EMAIL_ADDRESS}' ne semble pas correcte."
+	    echo "Cette adresse '${emailAddress}' ne semble pas correcte."
 	    echo "Nous continuons sans envoi d'email avec '- E nomail'."
-	    EMAIL_REPORT="nomail"
-	    EMAIL_ADDRESS=""
-	elif [[ -z ${EMAIL_ADDRESS} ]]; then
+	    emailReport="nomail"
+	    emailAddress=""
+	elif [[ -z ${emailAddress} ]]; then
 		echo ""
 		echo "L'adresse email est vide, nous continuons donc avec l'option '-l nomail'."
-		EMAIL_REPORT="nomail"
+		emailReport="nomail"
 	fi
 fi
 
 # Si il n'y a pas de dossier spécifique à scanner
-[[ ${SPECIFIC_DIR_TO_SCAN} -eq "0" ]] && echo ${DIRTOSCAN} | perl -p -e 's/%/\n/g' | perl -p -e 's/ //g' | awk '!x[$0]++' >> ${FILE_DIRTOSCAN}
+[[ ${specificDirToScan} -eq "0" ]] && echo ${dirToScan} | perl -p -e 's/%/\n/g' | perl -p -e 's/ //g' | awk '!x[$0]++' >> ${fileDirToScan}
 
 # Pour chaque dossier on fait un scan
-for S in $(cat ${FILE_DIRTOSCAN}); do
+serial=0
+for S in $(cat ${fileDirToScan}); do
+	let serial=$serial+1
 	echo ""
 	echo "Début du scan sur "$S"."
 	if [[ -e ${S} ]]; then
-		DIRSIZE=$(du -sh "$S" 2>/dev/null | cut -f1)
-		echo "Volume à scanner : "$DIRSIZE"."
-		[[ -z ${DIR_TO_EXCLUDE} ]] && clamscan -ri "$S"
-		[[ ! -z ${DIR_TO_EXCLUDE} ]] && clamscan -ri "$S" --exclude-dir="${DIR_TO_EXCLUDE}"
+		dirSize=$(du -sh "$S" 2>/dev/null | cut -f1)
+		echo "Volume à scanner : "$dirSize"."
+		[[ -z ${dirToExclude} ]] && clamscan -ri --stdout "$S" >> ${clamscanOutput}.${serial}
+		[[ ! -z ${dirToExclude} ]] && clamscan -ri --stdout "$S" --exclude-dir="${dirToExclude}" >> ${clamscanOutput}.${serial}
 	elif [[ ! -e ${S} ]]; then
-		let ERROR=$ERROR+1
+		let error=$error+1
 		echo "Problème rencontré sur : "$S", qui ne semble pas être correct."
 	fi
+	if [[ -e ${clamscanOutput}.${serial} ]]; then
+		cat ${clamscanOutput}.${serial} >> ${logFile}
+		
 done
 
 # get the value of "Infected lines"
-INFECTED=$(tail ${LOGFILE} | grep Infected | cut -d" " -f3)
-[[ ${INFECTED} -eq "0" ]] && echo "" && echo "*** Aucune infection détectée ***"
-[[ ${INFECTED} -ne "0" ]] && echo "" && echo "!!! INFECTION DÉTECTÉE !!!"
-[[ ${ERROR} -ne "0" ]] && echo "" && echo "*** Attention, une ou plusieurs erreurs rencontrées ***"
+infected=$(tail ${logFile} | grep Infected | cut -d" " -f3)
+[[ ${infected} -eq "0" ]] && echo "" && echo "*** Aucune infection détectée ***"
+[[ ${infected} -ne "0" ]] && echo "" && echo "!!! INFECTION DÉTECTÉE !!!"
+[[ ${error} -ne "0" ]] && echo "" && echo "*** Attention, une ou plusieurs erreurs rencontrées ***"
 
 exec 1>&6 6>&-
 
-if [[ ${EMAIL_REPORT} = "nomail" ]]; then
-	cat ${LOGFILE}
-elif [[ ${EMAIL_REPORT} = "onerror" ]]; then
-	if [[ ${INFECTED} -ne "0" ]]; then
-		cat ${LOGFILE} | mail -s "[MALWARE : ${SCRIPT_NAME}] on $(hostname)" ${EMAIL_ADDRESS}
-	elif [[ ${ERROR} -ne "0" ]]; then
-		cat ${LOGFILE} | mail -s "[ERROR : ${SCRIPT_NAME}] on $(hostname)" ${EMAIL_ADDRESS}
+if [[ ${emailReport} = "nomail" ]]; then
+	cat ${logFile}
+elif [[ ${emailReport} = "onerror" ]]; then
+	if [[ ${infected} -ne "0" ]]; then
+		cat ${logFile} | mail -s "[MALWARE : ${scriptName}] on $(hostname)" ${emailAddress}
+	elif [[ ${error} -ne "0" ]]; then
+		cat ${logFile} | mail -s "[error : ${scriptName}] on $(hostname)" ${emailAddress}
 	fi
-elif [[ ${EMAIL_REPORT} = "always" ]] ; then
-	if [[ ${INFECTED} -ne "0" ]]; then
-		cat ${LOGFILE} | mail -s "[MALWARE : ${SCRIPT_NAME}] on $(hostname)" ${EMAIL_ADDRESS}
-	elif [[ ${ERROR} -ne "0" ]]; then
-		cat ${LOGFILE} | mail -s "[ERROR : ${SCRIPT_NAME}] on $(hostname)" ${EMAIL_ADDRESS}
+elif [[ ${emailReport} = "always" ]] ; then
+	if [[ ${infected} -ne "0" ]]; then
+		cat ${logFile} | mail -s "[MALWARE : ${scriptName}] on $(hostname)" ${emailAddress}
+	elif [[ ${error} -ne "0" ]]; then
+		cat ${logFile} | mail -s "[error : ${scriptName}] on $(hostname)" ${emailAddress}
 	else
-		cat ${LOGFILE} | mail -s "[OK : ${SCRIPT_NAME}] on $(hostname)" ${EMAIL_ADDRESS}
+		cat ${logFile} | mail -s "[OK : ${scriptName}] on $(hostname)" ${emailAddress}
 	fi
 fi
 
-rm -R /tmp/${SCRIPT_NAME_WITHOUT_EXT}*
+rm -R /tmp/${scriptNameWithoutExt}*
 
-[[ ${ERROR} -ne "0" ]] && exit 1
-[[ ${INFECTED} -ne "0" ]] && exit 2
+[[ ${error} -ne "0" ]] && exit 1
+[[ ${infected} -ne "0" ]] && exit 2
 exit 0
