@@ -178,7 +178,7 @@ for S in $(cat ${fileDirToScan}); do
 done
 
 # get the value of "Infected lines"
-infected=$(tail ${logFile} | grep Infected | cut -d" " -f3)
+infected=$(tail ${tmpLog} | grep Infected | cut -d" " -f3)
 [[ ${infected} -eq "0" ]] && echo "" && echo "*** Aucune infection détectée ***"
 [[ ${infected} -ne "0" ]] && echo "" && echo "!!! INFECTION DÉTECTÉE !!!"
 [[ ${error} -ne "0" ]] && echo "" && echo "*** Attention, une ou plusieurs erreurs rencontrées ***"
@@ -186,22 +186,24 @@ infected=$(tail ${logFile} | grep Infected | cut -d" " -f3)
 exec 1>&6 6>&-
 
 if [[ ${emailReport} = "nomail" ]]; then
-	cat ${logFile}
+	cat ${tmpLog}
 elif [[ ${emailReport} = "onerror" ]]; then
 	if [[ ${infected} -ne "0" ]]; then
-		cat ${logFile} | mail -s "[MALWARE : ${scriptName}] on $(hostname)" ${emailAddress}
+		cat ${tmpLog} | mail -s "[MALWARE : ${scriptName}] on $(hostname)" ${emailAddress}
 	elif [[ ${error} -ne "0" ]]; then
-		cat ${logFile} | mail -s "[error : ${scriptName}] on $(hostname)" ${emailAddress}
+		cat ${tmpLog} | mail -s "[error : ${scriptName}] on $(hostname)" ${emailAddress}
 	fi
 elif [[ ${emailReport} = "always" ]] ; then
 	if [[ ${infected} -ne "0" ]]; then
-		cat ${logFile} | mail -s "[MALWARE : ${scriptName}] on $(hostname)" ${emailAddress}
+		cat ${tmpLog} | mail -s "[MALWARE : ${scriptName}] on $(hostname)" ${emailAddress}
 	elif [[ ${error} -ne "0" ]]; then
-		cat ${logFile} | mail -s "[error : ${scriptName}] on $(hostname)" ${emailAddress}
+		cat ${tmpLog} | mail -s "[error : ${scriptName}] on $(hostname)" ${emailAddress}
 	else
-		cat ${logFile} | mail -s "[OK : ${scriptName}] on $(hostname)" ${emailAddress}
+		cat ${tmpLog} | mail -s "[OK : ${scriptName}] on $(hostname)" ${emailAddress}
 	fi
 fi
+
+cat ${tmpLog} >> ${logFile}
 
 rm -R /tmp/${scriptNameWithoutExt}*
 
