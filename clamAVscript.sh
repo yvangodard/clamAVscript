@@ -171,15 +171,12 @@ for S in $(cat ${fileDirToScan}); do
 	if [[ -e ${S} ]]; then
 		dirSize=$(du -sh "$S" 2>/dev/null | cut -f1)
 		echo "Volume à scanner : "$dirSize"."
-		[[ -z ${dirToExclude} ]] && clamscan -ri --stdout "$S" >> ${clamscanOutput}.${serial}
-		[[ ! -z ${dirToExclude} ]] && clamscan -ri --stdout "$S" --exclude-dir="${dirToExclude}" >> ${clamscanOutput}.${serial}
+		[[ -z ${dirToExclude} ]] && clamscan -ri --stdout "$S"
+		[[ ! -z ${dirToExclude} ]] && clamscan -ri --stdout "$S" --exclude-dir="${dirToExclude}"
 	elif [[ ! -e ${S} ]]; then
 		let error=$error+1
 		echo "Problème rencontré sur : "$S", qui ne semble pas être correct."
 	fi
-	if [[ -e ${clamscanOutput}.${serial} ]]; then
-		cat ${clamscanOutput}.${serial} >> ${logFile}
-		
 done
 
 # get the value of "Infected lines"
