@@ -183,7 +183,7 @@ OLDIFS=$IFS
 IFS=$'\n'
 # Pour chaque dossier on fait un scan
 for directory in $(cat ${fileDirToScan}); do
-	hashDir=$(encode "${directory}")
+	hashDir=$(encode "${directory%/}")
 	logThisDir=${logSubDir%/}/${hashDir}.log
 	tmpLogThisDir=$(mktemp /tmp/${scriptNameWithoutExt}_tmpLog${hashDir}.XXXXX)
 	if [[ ! -f ${logThisDir} ]]; then
@@ -191,16 +191,16 @@ for directory in $(cat ${fileDirToScan}); do
 		[ $? -ne 0 ] && let error=$error+1 && echo "Problème pour créer le fichier de log '${logThisDir}' concernant le dossier '${directory}'." 
 	fi
 	echo "-------------------------------"
-	echo "Début du scan sur '${directory}'."
+	echo "Début du scan sur '${directory%/}'."
 	if [[ -e ${directory} ]]; then
-		dirSize=$(du -sh "$directory" 2>/dev/null | cut -f1)
+		dirSize=$(du -sh ${directory%/} 2>/dev/null | cut -f1)
 		echo "Volume à scanner : ${dirSize}."
-		[[ -z ${dirToExclude} ]] && clamscan -ri --stdout "${directory}" >> ${tmpLogThisDir}
-		[[ ! -z ${dirToExclude} ]] && clamscan -ri --stdout "${directory}" --exclude-dir="${dirToExclude}" >> ${tmpLogThisDir}
+		[[ -z ${dirToExclude} ]] && clamscan -ri --stdout ${directory%/} >> ${tmpLogThisDir}
+		[[ ! -z ${dirToExclude} ]] && clamscan -ri --stdout ${directory%/} --exclude-dir="${dirToExclude}" >> ${tmpLogThisDir}
 		cat ${tmpLogThisDir} && cat ${tmpLogThisDir} >> ${logThisDir}
 	elif [[ ! -e ${directory} ]]; then
 		let error=$error+1
-		echo "Problème rencontré sur '${directory}', qui ne semble pas être correct."
+		echo "Problème rencontré sur '${directory%/}', qui ne semble pas être correct."
 	fi
 	echo "Logs séparés des scans AV de ce dossier dans '${logThisDir}'."
 	echo ""
