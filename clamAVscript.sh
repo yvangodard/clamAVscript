@@ -182,6 +182,7 @@ echo ""
 for directory in $(cat ${fileDirToScan}); do
 	hashDir=$(echo "${directory}" | encode)
 	logThisDir=${logSubDir%/}/${hashDir}.log
+	tmpLogThisDir=$(mktemp /tmp/${scriptNameWithoutExt}_tmpLog${hashDir}.XXXXX)
 	if [[ ! -f ${logThisDir} ]]; then
 		touch ${logThisDir}
 		[ $? -ne 0 ] && let error=$error+1 && echo "Problème pour créer le fichier de log '${logThisDir}' concernant le dossier '${directory}'." 
@@ -191,9 +192,9 @@ for directory in $(cat ${fileDirToScan}); do
 	if [[ -e ${directory} ]]; then
 		dirSize=$(du -sh "$directory" 2>/dev/null | cut -f1)
 		echo "Volume à scanner : ${dirSize}."
-		[[ -z ${dirToExclude} ]] && clamscan -ri --stdout "${directory}" >> ${logThisDir}
-		[[ ! -z ${dirToExclude} ]] && clamscan -ri --stdout "${directory}" --exclude-dir="${dirToExclude}" >> ${logThisDir}
-		cat ${logThisDir}
+		[[ -z ${dirToExclude} ]] && clamscan -ri --stdout "${directory}" >> ${tmpLogThisDir}
+		[[ ! -z ${dirToExclude} ]] && clamscan -ri --stdout "${directory}" --exclude-dir="${dirToExclude}" >> ${tmpLogThisDir}
+		cat ${tmpLogThisDir} && cat ${tmpLogThisDir} >> ${logThisDir}
 	elif [[ ! -e ${directory} ]]; then
 		let error=$error+1
 		echo "Problème rencontré sur '${directory}', qui ne semble pas être correct."
