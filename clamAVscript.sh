@@ -150,7 +150,7 @@ exec >> ${tmpLog}
 echo "**** `date` ****"
 
 # Contrôle du paramètre emailReport
-if [[ ${emailReport} != "always" ]] && [[ ${emailReport} != "onerror" ]] && [[ ${emailReport} != "nomail" ]]; then
+if [[ "${emailReport}" -ne "always" ]] && [[ "${emailReport}" -ne "onerror" ]] && [[ "${emailReport}" -ne "nomail" ]]; then
 	echo ""
 	echo "Le paramètre '-E ${emailReport}' n'est pas correct. Nous poursuivons avec '-E nomail'."
 	emailReport="nomail"
