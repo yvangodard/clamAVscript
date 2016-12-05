@@ -178,9 +178,12 @@ echo ""
 # Si il n'y a pas de dossier spécifique à scanner
 [[ ${specificDirToScan} -eq "0" ]] && echo ${dirToScan} | perl -p -e 's/%/\n/g' | perl -p -e 's/ //g' | awk '!x[$0]++' >> ${fileDirToScan}
 
+# Changement du séparateur par défaut
+OLDIFS=$IFS
+IFS=$'\n'
 # Pour chaque dossier on fait un scan
 for directory in $(cat ${fileDirToScan}); do
-	hashDir=$(echo "${directory}" | encode)
+	hashDir=$(encode "${directory}")
 	logThisDir=${logSubDir%/}/${hashDir}.log
 	tmpLogThisDir=$(mktemp /tmp/${scriptNameWithoutExt}_tmpLog${hashDir}.XXXXX)
 	if [[ ! -f ${logThisDir} ]]; then
@@ -201,13 +204,10 @@ for directory in $(cat ${fileDirToScan}); do
 	fi
 	echo "Logs séparés des scans AV de ce dossier dans '${logThisDir}'."
 	echo ""
-	# Changement du séparateur par défaut
-	OLDIFS=$IFS
-	IFS=$'\n'
 	# Nettoyage des logs pour supprimer les espaces
 	sed "/^[ \t]*$/d" ${logThisDir} > ${logThisDir}.new && rm ${logThisDir} && mv ${logThisDir}.new ${logThisDir}
-	IFS=$OLDIFS
 done
+IFS=$OLDIFS
 
 # get the value of "Infected lines"
 infected=$(tail ${tmpLog} | grep Infected | cut -d" " -f3)
