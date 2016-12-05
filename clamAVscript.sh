@@ -127,20 +127,20 @@ done
 
 [[ ${help} = "yes" ]] && help
 
-if [[ ! -d ${logDir%/} ]]; then
+if [[ ! -e ${logDir%/} ]] || [[ ! -d ${logDir%/} ]]; then
 	mkdir -p ${logDir%/}
 	[ $? -ne 0 ] && echo "Problème pour créer le dossier des logs '${logDir%/}'." && exit 1
 fi
 
-if [[ ! -f "${logFile}" ]]; then
-	echo "Test log"
+if [[ ! -e "${logFile}" ]] || [[ ! -f "${logFile}" ]]; then
 	touch ${logFile}
 	[ $? -ne 0 ] && echo "Problème pour accéder au fichier de logs '${logFile}'." && exit 1
 fi
 
-if [[ ! -d ${logFile%/} ]]; then
-	mkdir -p ${logFile%/}
-	[ $? -ne 0 ] && echo "Problème pour créer le sous-dossier des logs '${logFile%/}'." && exit 1
+logSubDir=$(echo "${logFile}" | cut -f1 -d '.').d
+if [[ ! -e ${logSubDir} ]] || [[ ! -d ${logSubDir} ]]; then
+	mkdir -p ${logSubDir}
+	[ $? -ne 0 ] && echo "Problème pour créer le sous-dossier des logs '${logSubDir}'." && exit 1
 fi
 
 # Redirect standard outpout to temp file
@@ -179,7 +179,7 @@ fi
 # Pour chaque dossier on fait un scan
 for directory in $(cat ${fileDirToScan}); do
 	hashDir=$(echo "${directory}" | encode)
-	logThisDir=${logFile%/}/${hashDir}.log
+	logThisDir=${logSubDir%/}/${hashDir}.log
 	if [[ ! -f ${logThisDir} ]]; then
 		touch ${logThisDir}
 		[ $? -ne 0 ] && echo "Problème pour créer le fichier de log '${logThisDir}' concernant le dossier '${directory}'." && exit 1
