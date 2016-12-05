@@ -132,7 +132,7 @@ if [[ ! -d ${logDir%/} ]]; then
 	[ $? -ne 0 ] && echo "Problème pour créer le dossier des logs '${logDir%/}'." && exit 1
 fi
 
-if [[ ! -f ${logFile} ]]; then
+if [[ ! -f "${logFile}" ]]; then
 	touch ${logFile}
 	[ $? -ne 0 ] && echo "Problème pour accéder au fichier de logs '${logFile}'." && exit 1
 fi
