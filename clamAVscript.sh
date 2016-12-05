@@ -47,10 +47,10 @@ IFS=$'\n'
 # Auto-update script, en fonction de l'OS
 # On teste l'empreinte MD5 du script et on la compare à celle de GitHub
 if [[ ${systemOs} == "Mac" ]] && [[ $(checkUrl ${githubRemoteScript}) -eq 0 ]] && [[ $(md5 -q "$0") != $(curl -Lsf ${githubRemoteScript} | md5 -q) ]]; then
-	toBeUpdated=1
+	toBeUpdated=0
 fi
 if [[ ${systemOs} == "Linux" ]] && [[ $(checkUrl ${githubRemoteScript}) -eq 0 ]] && [[ $(md5sum "$0" | awk '{print $1}') != $(curl -Lsf ${githubRemoteScript} | md5sum | awk '{print $1}') ]]; then
-	toBeUpdated=1
+	toBeUpdated=0
 fi
 # Si une mise à jour est à faire on la réalise
 if [[ ${toBeUpdated} -eq "1" ]]; then
