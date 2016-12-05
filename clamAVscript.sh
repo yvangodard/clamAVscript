@@ -5,7 +5,7 @@ scriptName=$(basename $0)
 scriptNameWithoutExt=$(echo "${scriptName}" | cut -f1 -d '.')
 system=$(uname -a)
 logDir="/var/log/clamav"
-logFile="${logDir%/}/clamav.log"
+logFile="${logDir%/}/${scriptNameWithoutExt}.log"
 dirToScan="/var/www%/var/mail"
 fileDirToScan=$(mktemp /tmp/${scriptNameWithoutExt}_fileDirToScan.XXXXX)
 tmpLog=$(mktemp /tmp/${scriptNameWithoutExt}_tmpLog.XXXXX)
@@ -47,10 +47,10 @@ IFS=$'\n'
 # Auto-update script, en fonction de l'OS
 # On teste l'empreinte MD5 du script et on la compare à celle de GitHub
 if [[ ${systemOs} == "Mac" ]] && [[ $(checkUrl ${githubRemoteScript}) -eq 0 ]] && [[ $(md5 -q "$0") != $(curl -Lsf ${githubRemoteScript} | md5 -q) ]]; then
-	toBeUpdated=0
+	toBeUpdated=1
 fi
 if [[ ${systemOs} == "Linux" ]] && [[ $(checkUrl ${githubRemoteScript}) -eq 0 ]] && [[ $(md5sum "$0" | awk '{print $1}') != $(curl -Lsf ${githubRemoteScript} | md5sum | awk '{print $1}') ]]; then
-	toBeUpdated=0
+	toBeUpdated=1
 fi
 # Si une mise à jour est à faire on la réalise
 if [[ ${toBeUpdated} -eq "1" ]]; then
@@ -143,18 +143,19 @@ if [[ ! -e ${logSubDir} ]] || [[ ! -d ${logSubDir} ]]; then
 	[ $? -ne 0 ] && echo "Problème pour créer le sous-dossier des logs '${logSubDir}'." && exit 1
 fi
 
-# Redirect standard outpout to temp file
-exec 6>&1
-exec >> ${tmpLog}
-
-echo "**** `date` ****"
-
 # Contrôle du paramètre emailReport
-if [[ "${emailReport}" -ne "always" ]] && [[ "${emailReport}" -ne "onerror" ]] && [[ "${emailReport}" -ne "nomail" ]]; then
+if [[ "${emailReport}" != "always" ]] && [[ "${emailReport}" != "onerror" ]] && [[ "${emailReport}" != "nomail" ]]; then
 	echo ""
 	echo "Le paramètre '-E ${emailReport}' n'est pas correct. Nous poursuivons avec '-E nomail'."
 	emailReport="nomail"
 fi
+
+# Redirect standard outpout to temp file
+exec 6>&1
+exec >> ${tmpLog}
+
+echo ""
+echo "**** `date` ****"
 
 # Contrôle du paramètre emailReport
 if [[ ${emailReport} = "always" ]] || [[ ${emailReport} = "onerror" ]]; then
@@ -173,6 +174,7 @@ if [[ ${emailReport} = "always" ]] || [[ ${emailReport} = "onerror" ]]; then
 	fi
 fi
 
+echo ""
 # Si il n'y a pas de dossier spécifique à scanner
 [[ ${specificDirToScan} -eq "0" ]] && echo ${dirToScan} | perl -p -e 's/%/\n/g' | perl -p -e 's/ //g' | awk '!x[$0]++' >> ${fileDirToScan}
 
@@ -182,30 +184,30 @@ for directory in $(cat ${fileDirToScan}); do
 	logThisDir=${logSubDir%/}/${hashDir}.log
 	if [[ ! -f ${logThisDir} ]]; then
 		touch ${logThisDir}
-		[ $? -ne 0 ] && echo "Problème pour créer le fichier de log '${logThisDir}' concernant le dossier '${directory}'." && exit 1
+		[ $? -ne 0 ] && let error=$error+1 && echo "Problème pour créer le fichier de log '${logThisDir}' concernant le dossier '${directory}'." 
 	fi
-	echo "" >> ${logThisDir}
-	echo "-------------------------------" >> ${logThisDir}
-	echo "$(date)" >> ${logThisDir}
-	echo "Début du scan sur '${directory}'." >> ${logThisDir}
-	echo "Logs séparés de ce dossier dans '${logThisDir}'." >> ${logThisDir}
+	echo "-------------------------------"
+	echo "Début du scan sur '${directory}'."
 	if [[ -e ${directory} ]]; then
 		dirSize=$(du -sh "$directory" 2>/dev/null | cut -f1)
 		echo "Volume à scanner : ${dirSize}."
 		[[ -z ${dirToExclude} ]] && clamscan -ri --stdout "${directory}" >> ${logThisDir}
 		[[ ! -z ${dirToExclude} ]] && clamscan -ri --stdout "${directory}" --exclude-dir="${dirToExclude}" >> ${logThisDir}
+		cat ${logThisDir}
 	elif [[ ! -e ${directory} ]]; then
 		let error=$error+1
-		echo "Problème rencontré sur '${directory}', qui ne semble pas être correct." >> ${logThisDir}
+		echo "Problème rencontré sur '${directory}', qui ne semble pas être correct."
 	fi
-	cat ${logThisDir} >> ${tmpLog}
+	echo "Logs séparés des scans AV de ce dossier dans '${logThisDir}'."
+	echo ""
 done
 
 # get the value of "Infected lines"
 infected=$(tail ${tmpLog} | grep Infected | cut -d" " -f3)
-[[ ${infected} -eq "0" ]] && echo "" && echo "*** Aucune infection détectée ***"
-[[ ${infected} -ne "0" ]] && echo "" && echo "!!! INFECTION DÉTECTÉE !!!"
-[[ ${error} -ne "0" ]] && echo "" && echo "*** Attention, une ou plusieurs erreurs rencontrées ***"
+echo "Résultat général de ce scan :"
+[[ ${infected} -eq "0" ]] && echo "" && echo "*** Aucune infection détectée ***" && echo ""
+[[ ${infected} -ne "0" ]] && echo "" && echo "!!! INFECTION DÉTECTÉE !!!" && echo ""
+[[ ${error} -ne "0" ]] && echo "" && echo "*** Attention, une ou plusieurs erreurs rencontrées ***" && echo ""
 
 exec 1>&6 6>&-
 
