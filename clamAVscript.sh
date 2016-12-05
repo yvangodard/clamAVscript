@@ -23,10 +23,16 @@ toBeUpdated=0
 echo ${system} | grep "Darwin" > /dev/null 2>&1
 if [[ $? -eq 0 ]]; then
 	systemOs="Mac"
+	function encode () {
+		echo "${1}" | md5
+	}
 fi
 echo ${system} | grep "Linux" > /dev/null 2>&1
 if [[ $? -eq 0 ]]; then
 	systemOs="Linux"
+	function encode () {
+		echo "${1}" | md5sum | awk '{print $1}'
+	}
 fi
 
 # Check URL
@@ -121,13 +127,18 @@ done
 
 [[ ${help} = "yes" ]] && help
 
-if [[ ! -e ${logDir%/} ]]; then
+if [[ ! -d ${logDir%/} ]]; then
 	mkdir -p ${logDir%/}
 	[ $? -ne 0 ] && echo "Problème pour créer le dossier des logs '${logDir%/}'." && exit 1
 fi
 
-touch ${logFile}
+[[ ! -f ${logFile} ]] && touch ${logFile}
 [ $? -ne 0 ] && echo "Problème pour accéder au fichier de logs '${logFile}'." && exit 1
+
+if [[ ! -d ${logFile%/} ]]; then
+	mkdir -p ${logFile%/}
+	[ $? -ne 0 ] && echo "Problème pour créer le sous-dossier des logs '${logFile%/}'." && exit 1
+fi
 
 # Redirect standard outpout to temp file
 exec 6>&1
@@ -136,7 +147,7 @@ exec >> ${tmpLog}
 echo "**** `date` ****"
 
 # Contrôle du paramètre emailReport
-if [[ ${emailReport} -ne "always" ]] && [[ ${emailReport} -ne "onerror" ]] && [[ ${emailReport} -ne "nomail" ]]; then
+if [[ ${emailReport} !== "always" ]] && [[ ${emailReport} !== "onerror" ]] && [[ ${emailReport} !== "nomail" ]]; then
 	echo ""
 	echo "Le paramètre '-E ${emailReport}' n'est pas correct. Nous poursuivons avec '-E nomail'."
 	emailReport="nomail"
@@ -163,18 +174,28 @@ fi
 [[ ${specificDirToScan} -eq "0" ]] && echo ${dirToScan} | perl -p -e 's/%/\n/g' | perl -p -e 's/ //g' | awk '!x[$0]++' >> ${fileDirToScan}
 
 # Pour chaque dossier on fait un scan
-for S in $(cat ${fileDirToScan}); do
-	echo ""
-	echo "Début du scan sur "$S"."
-	if [[ -e ${S} ]]; then
-		dirSize=$(du -sh "$S" 2>/dev/null | cut -f1)
+for directory in $(cat ${fileDirToScan}); do
+	hashDir=$(echo "${directory}" | encode)
+	logThisDir=${logFile%/}/${hashDir}.log
+	if [[ ! -f ${logThisDir} ]]; then
+		touch ${logThisDir}
+		[ $? -ne 0 ] && echo "Problème pour créer le fichier de log '${logThisDir}' concernant le dossier '${directory}'." && exit 1
+	fi
+	echo "" >> ${logThisDir}
+	echo "-------------------------------" >> ${logThisDir}
+	echo "$(date)" >> ${logThisDir}
+	echo "Début du scan sur '${directory}'." >> ${logThisDir}
+	echo "Logs séparés de ce dossier dans '${logThisDir}'." >> ${logThisDir}
+	if [[ -e ${directory} ]]; then
+		dirSize=$(du -sh "$directory" 2>/dev/null | cut -f1)
 		echo "Volume à scanner : "$dirSize"."
-		[[ -z ${dirToExclude} ]] && clamscan -ri --stdout "$S"
-		[[ ! -z ${dirToExclude} ]] && clamscan -ri --stdout "$S" --exclude-dir="${dirToExclude}"
+		[[ -z ${dirToExclude} ]] && clamscan -ri --stdout "${directory}" >> ${logThisDir}
+		[[ ! -z ${dirToExclude} ]] && clamscan -ri --stdout "${directory}" --exclude-dir="${dirToExclude}" >> ${logThisDir}
 	elif [[ ! -e ${S} ]]; then
 		let error=$error+1
-		echo "Problème rencontré sur : "$S", qui ne semble pas être correct."
+		echo "Problème rencontré sur '${directory}', qui ne semble pas être correct." >> ${logThisDir}
 	fi
+	cat ${logThisDir} >> ${tmpLog}
 done
 
 # get the value of "Infected lines"
