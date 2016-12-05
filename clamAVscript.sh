@@ -133,6 +133,7 @@ if [[ ! -d ${logDir%/} ]]; then
 fi
 
 if [[ ! -f "${logFile}" ]]; then
+	echo "Test log"
 	touch ${logFile}
 	[ $? -ne 0 ] && echo "Problème pour accéder au fichier de logs '${logFile}'." && exit 1
 fi
@@ -190,10 +191,10 @@ for directory in $(cat ${fileDirToScan}); do
 	echo "Logs séparés de ce dossier dans '${logThisDir}'." >> ${logThisDir}
 	if [[ -e ${directory} ]]; then
 		dirSize=$(du -sh "$directory" 2>/dev/null | cut -f1)
-		echo "Volume à scanner : "$dirSize"."
+		echo "Volume à scanner : ${dirSize}."
 		[[ -z ${dirToExclude} ]] && clamscan -ri --stdout "${directory}" >> ${logThisDir}
 		[[ ! -z ${dirToExclude} ]] && clamscan -ri --stdout "${directory}" --exclude-dir="${dirToExclude}" >> ${logThisDir}
-	elif [[ ! -e ${S} ]]; then
+	elif [[ ! -e ${directory} ]]; then
 		let error=$error+1
 		echo "Problème rencontré sur '${directory}', qui ne semble pas être correct." >> ${logThisDir}
 	fi
