@@ -201,14 +201,24 @@ for directory in $(cat ${fileDirToScan}); do
 	fi
 	echo "Logs séparés des scans AV de ce dossier dans '${logThisDir}'."
 	echo ""
+	# Changement du séparateur par défaut
+	OLDIFS=$IFS
+	IFS=$'\n'
+	# Nettoyage des logs pour supprimer les espaces
+	sed "/^[ \t]*$/d" ${logThisDir} > ${logThisDir}.new && rm ${logThisDir} && mv ${logThisDir}.new ${logThisDir}
+	IFS=$OLDIFS
 done
 
 # get the value of "Infected lines"
 infected=$(tail ${tmpLog} | grep Infected | cut -d" " -f3)
+echo "-------------------------------"
+echo "-------------------------------"
 echo "Résultat général de ce scan :"
 [[ ${infected} -eq "0" ]] && echo "" && echo "*** Aucune infection détectée ***" && echo ""
 [[ ${infected} -ne "0" ]] && echo "" && echo "!!! INFECTION DÉTECTÉE !!!" && echo ""
 [[ ${error} -ne "0" ]] && echo "" && echo "*** Attention, une ou plusieurs erreurs rencontrées ***" && echo ""
+echo "Le fichier de log général est disponible à l'emplacement suivant :"
+echo "'${logFile}'"
 
 exec 1>&6 6>&-
 
